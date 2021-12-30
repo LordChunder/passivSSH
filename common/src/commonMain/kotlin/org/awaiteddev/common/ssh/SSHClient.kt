@@ -21,7 +21,7 @@ class SSHClient(host: String, username: String, port: Int, onConnected: (Boolean
     private fun buildClient(host: String, username: String, port: Int, onConnected: (Boolean) -> Unit) {
         Thread {
             try {
-                session = Builder(host, username, port, "pvtKey").build()!!
+                session = Builder(host, username, port, "pvtKey.key").build()!!
                 session.connect()
             } catch (e: JSchException) {
                 onConnected.invoke(false)

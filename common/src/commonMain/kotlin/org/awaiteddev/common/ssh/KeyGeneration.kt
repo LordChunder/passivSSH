@@ -19,7 +19,7 @@ class KeyGeneration {
                 val keyGen = KeyPairGenerator.getInstance("RSA")
                 keyGen.initialize(2048)
                 val key = keyGen.generateKeyPair()
-                val privateKeyFile = File("pvtKey")
+                val privateKeyFile = File("pvtKey.key")
                 val publicKeyFile = File("pubKey.pub")
 
                 // Create files to store public and private key

@@ -1,5 +1,5 @@
 plugins {
-    id("org.jetbrains.compose") version "1.0.0"
+    id("org.jetbrains.compose") version "1.0.1"
     id("com.android.application")
     kotlin("android")
 }
@@ -7,21 +7,17 @@ plugins {
 group = "admin.awaiteddev"
 version = "0.1"
 
-repositories {
-    jcenter()
-}
-
 dependencies {
     implementation(project(":common"))
     implementation("androidx.activity:activity-compose:1.4.0")
 }
 
 android {
-    compileSdkVersion(31)
+    compileSdk=31
     defaultConfig {
         applicationId = "admin.awaiteddev.android"
-        minSdkVersion(24)
-        targetSdkVersion(31)
+        minSdk=24
+        targetSdk=31
         versionCode = 1
         versionName = "1.0"
     }

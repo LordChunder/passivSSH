@@ -7,5 +7,6 @@
 /common/build/classes/kotlin/desktop/main/
 /desktop/build/
 /desktop/build/classes/kotlin/jvm/main/
-.key
-.pub
+*.key
+*.pub
+*.log

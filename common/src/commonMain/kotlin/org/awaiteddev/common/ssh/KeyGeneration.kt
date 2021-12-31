@@ -1,9 +1,7 @@
 package org.awaiteddev.common.ssh
 
-import org.bouncycastle.openssl.PEMWriter
+import org.awaiteddev.common.data.KeyData
 import java.io.ByteArrayOutputStream
-import java.io.File
-import java.io.FileWriter
 import java.io.IOException
 import java.math.BigInteger
 import java.security.KeyPairGenerator
@@ -14,40 +12,23 @@ class KeyGeneration {
 
     companion object {
 
-        fun generateKeyPair(username:String) {
-            try {
+        fun generateKeyPair(username: String, keyName: String): KeyData? {
+            return try {
                 val keyGen = KeyPairGenerator.getInstance("RSA")
                 keyGen.initialize(2048)
                 val key = keyGen.generateKeyPair()
-                val privateKeyFile = File("pvtKey.key")
-                val publicKeyFile = File("pubKey.pub")
 
-                // Create files to store public and private key
-                if (privateKeyFile.parentFile != null) {
-                    privateKeyFile.parentFile.mkdirs()
-                }
-                privateKeyFile.createNewFile()
-                if (publicKeyFile.parentFile != null) {
-                    publicKeyFile.parentFile.mkdirs()
-                }
-                publicKeyFile.createNewFile()
-
-
-                // Saving the Public key in a file
-                val writer = FileWriter(publicKeyFile)
-                val rsaKey = encodeAsOpenSSH(key.public as RSAPublicKey,username)
-
-                writer.write(rsaKey)
-                writer.close()
-                // Saving the Private key in a file
-                val pemWriter = PEMWriter(FileWriter(privateKeyFile))
-                pemWriter.writeObject(key.private)
-                pemWriter.close()
-
+                val rsaKey = encodeAsOpenSSH(key.public as RSAPublicKey, username)
+                val path = KeyFileHandler.saveKeyToFile(keyName,rsaKey, key.private)
+                if (path != "")
+                    KeyData(keyName, username, rsaKey, path)
+                else null
             } catch (e: Exception) {
                 e.printStackTrace()
+                null
             }
         }
+
         private fun encodeAsOpenSSH(key: RSAPublicKey): String {
             val keyBlob: ByteArray? = keyBlob(key.publicExponent, key.modulus)
             val encodedByteArray = Base64.getEncoder().encode(keyBlob)

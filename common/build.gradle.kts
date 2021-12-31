@@ -27,6 +27,7 @@ kotlin {
                 implementation ("org.slf4j:slf4j-simple:1.6.4")
                 implementation("com.jcraft:jsch:0.1.55")
                 implementation("org.bouncycastle:bcprov-jdk16:1.45")
+                implementation("com.google.code.gson:gson:2.8.8")
 
             }
         }
@@ -55,4 +56,9 @@ android {
         sourceCompatibility = JavaVersion.VERSION_1_8
         targetCompatibility = JavaVersion.VERSION_1_8
     }
+}
+dependencies {
+    implementation(project(mapOf("path" to ":common")))
+    implementation("androidx.compose.ui:ui:1.0.0-beta04")
+    implementation("androidx.compose.material:material-icons-core:1.0.0-beta04")
 }

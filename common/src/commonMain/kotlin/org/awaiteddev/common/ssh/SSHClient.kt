@@ -4,6 +4,7 @@ import com.jcraft.jsch.ChannelExec
 import com.jcraft.jsch.JSch
 import com.jcraft.jsch.JSchException
 import com.jcraft.jsch.Session
+import org.awaiteddev.common.data.KeyData
 import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.nio.file.Path
@@ -11,17 +12,17 @@ import java.nio.file.Paths
 import java.util.*
 
 
-class SSHClient(host: String, username: String, port: Int, onConnected: (Boolean) -> Unit) {
+class SSHClient(host: String, username: String, port: Int, keyData:KeyData,onConnected: (Boolean) -> Unit) {
     private lateinit var session: Session
 
     init {
-        buildClient(host, username, port, onConnected)
+        buildClient(host, username, port, keyData.privateKeyPath,onConnected)
     }
 
-    private fun buildClient(host: String, username: String, port: Int, onConnected: (Boolean) -> Unit) {
+    private fun buildClient(host: String, username: String, port: Int, path:String,onConnected: (Boolean) -> Unit) {
         Thread {
             try {
-                session = Builder(host, username, port, "pvtKey.key").build()!!
+                session = Builder(host, username, port, path).build()!!
                 session.connect()
             } catch (e: JSchException) {
                 onConnected.invoke(false)
@@ -61,7 +62,7 @@ class SSHClient(host: String, username: String, port: Int, onConnected: (Boolean
                     while (inputStream.ready()) {
                         val i: Int = inputStream.read(tmp, 0, 1024)
                         if (i < 0) break
-                        val responseMsg = String(tmp, 0, i).replace("\n","");
+                        val responseMsg = String(tmp, 0, i).replace("\n","")
                         onResponse.invoke(responseMsg)
                         receivedResponse = true
                     }
@@ -90,7 +91,7 @@ class SSHClient(host: String, username: String, port: Int, onConnected: (Boolean
     class Builder(private val host: String, private val username: String, private val port: Int, path: String) {
 
         private val privateKeyPath: Path
-        lateinit var jschSession: Session
+        private lateinit var jschSession: Session
 
         init {
             this.privateKeyPath = Paths.get(path)

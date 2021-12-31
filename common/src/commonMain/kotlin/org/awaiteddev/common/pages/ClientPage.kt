@@ -11,7 +11,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import kotlinx.coroutines.launch
-import org.awaiteddev.common.ssh
+import org.awaiteddev.common.data.AppDataManager.ssh
+
 import java.sql.Timestamp
 import java.text.SimpleDateFormat
 
@@ -20,6 +21,7 @@ fun ClientPage() {
     var showSpinner by remember { mutableStateOf(false) }
     var cmdInput by remember { mutableStateOf("") }
     var responseValue by remember { mutableStateOf("") }
+
     val scroll = rememberScrollState(100)
     val scope = rememberCoroutineScope()
     Column(horizontalAlignment = Alignment.CenterHorizontally) {

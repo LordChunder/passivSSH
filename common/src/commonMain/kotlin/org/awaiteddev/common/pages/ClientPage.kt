@@ -11,10 +11,16 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import kotlinx.coroutines.launch
+import org.awaiteddev.common.data.AppDataManager
+import org.awaiteddev.common.data.AppDataManager.cmdQueue
 import org.awaiteddev.common.data.AppDataManager.ssh
+import org.awaiteddev.common.ssh.SSHClient
 
 import java.sql.Timestamp
 import java.text.SimpleDateFormat
+import java.util.concurrent.ConcurrentLinkedDeque
+import java.util.concurrent.ConcurrentLinkedQueue
+
 
 @Composable
 fun ClientPage() {
@@ -24,6 +30,17 @@ fun ClientPage() {
 
     val scroll = rememberScrollState(100)
     val scope = rememberCoroutineScope()
+
+    if (ssh != null && !ssh!!.shellOpen) {
+        ssh!!.openShell {
+            responseValue += "\n${SimpleDateFormat("HH:mm:ss").format(Timestamp(System.currentTimeMillis()))}: $it"
+            showSpinner = false
+            scope.launch {
+                scroll.scrollTo(0)
+            }
+        }
+    }
+
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Box(contentAlignment = Alignment.TopCenter) {
             TextField(
@@ -31,7 +48,7 @@ fun ClientPage() {
                 onValueChange = { responseValue = it },
                 enabled = false,
                 label = { Text("Response") },
-                modifier = Modifier.fillMaxWidth().fillMaxHeight(.35f).verticalScroll(scroll, reverseScrolling = true)
+                modifier = Modifier.fillMaxWidth().fillMaxHeight(.65f).verticalScroll(scroll, reverseScrolling = true)
             )
         }
         Column(
@@ -46,14 +63,7 @@ fun ClientPage() {
             Button(onClick = {
                 showSpinner = true
                 responseValue += "\n>> $cmdInput"
-
-                ssh!!.execute(List(1) { cmdInput }) {
-                    showSpinner = false
-                    responseValue += "\n${SimpleDateFormat("HH:mm:ss").format(Timestamp(System.currentTimeMillis()))}: $it"
-                    scope.launch {
-                        scroll.scrollTo(0)
-                    }
-                }
+                cmdQueue.add(cmdInput)
             }) { Text("Exec") }
         }
     }

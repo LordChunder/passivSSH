@@ -56,15 +56,20 @@ fun ClientPage() {
             horizontalAlignment = Alignment.CenterHorizontally,
             modifier = Modifier.fillMaxHeight()
         ) {
-            if (showSpinner) {
-                CircularProgressIndicator()
-            }
-            TextField(value = cmdInput, onValueChange = { cmdInput = it }, label = { Text("Enter Command") })
+
+
+            TextField(value = cmdInput, onValueChange = { cmdInput = it }, label = { Text("Enter Command") }, singleLine = true)
             Button(onClick = {
                 showSpinner = true
                 responseValue += "\n>> $cmdInput"
+                cmdInput=""
                 cmdQueue.add(cmdInput)
             }) { Text("Exec") }
+            Box {
+                if (showSpinner) {
+                    CircularProgressIndicator()
+                }
+            }
         }
     }
 }

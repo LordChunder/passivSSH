@@ -48,7 +48,7 @@ class SSHClient(host: String, username: String, port: Int, keyData: KeyData, onC
             channel.setOutputStream(baos, true)
             channel.setInputStream(pip, true)
             channel.connect()
-            
+
             var lastCmd =""
             shellOpen = true
             Thread {
@@ -66,9 +66,7 @@ class SSHClient(host: String, username: String, port: Int, keyData: KeyData, onC
                     if (baos.toString() != "") {
                         try {
                             baos.toString().split("\n").forEach {
-                                  if(it != lastCmd) {
-                                onResponse.invoke(it)
-                                  }
+                                  if(it != lastCmd) onResponse.invoke(it)
                             }
                             baos.reset()
                         } catch (e: Exception) {
@@ -77,10 +75,11 @@ class SSHClient(host: String, username: String, port: Int, keyData: KeyData, onC
                     }
                     if (channel.isClosed) {
                         print("Channel Closed")
+                        shellOpen=false
                         break
                     }
                     try {
-                        Thread.sleep(1000)
+                        Thread.sleep(500)
                     } catch (e: Exception) {
                         e.printStackTrace()
                     }

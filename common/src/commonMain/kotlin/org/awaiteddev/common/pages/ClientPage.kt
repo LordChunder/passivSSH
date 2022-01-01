@@ -31,14 +31,15 @@ fun ClientPage() {
     val scroll = rememberScrollState(100)
     val scope = rememberCoroutineScope()
 
-    if (ssh != null && !ssh!!.shellOpen) {
-        ssh!!.openShell {
-            responseValue += "\n${SimpleDateFormat("HH:mm:ss").format(Timestamp(System.currentTimeMillis()))}: $it"
-            showSpinner = false
-            scope.launch {
-                scroll.scrollTo(0)
+    if (ssh != null) {
+        if (!ssh!!.shellOpen)
+            ssh!!.openShell {
+                responseValue += "\n${SimpleDateFormat("HH:mm:ss").format(Timestamp(System.currentTimeMillis()))}: $it"
+                showSpinner = false
+                scope.launch {
+                    scroll.scrollTo(0)
+                }
             }
-        }
     }
 
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -58,12 +59,17 @@ fun ClientPage() {
         ) {
 
 
-            TextField(value = cmdInput, onValueChange = { cmdInput = it }, label = { Text("Enter Command") }, singleLine = true)
+            TextField(
+                value = cmdInput,
+                onValueChange = { cmdInput = it },
+                label = { Text("Enter Command") },
+                singleLine = true
+            )
             Button(onClick = {
                 showSpinner = true
                 responseValue += "\n>> $cmdInput"
                 cmdQueue.add(cmdInput)
-                cmdInput=""
+                cmdInput = ""
             }) { Text("Exec") }
             Box {
                 if (showSpinner) {

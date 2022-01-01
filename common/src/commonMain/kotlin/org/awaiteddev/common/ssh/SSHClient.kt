@@ -15,6 +15,7 @@ import java.util.*
 class SSHClient(host: String, username: String, port: Int, keyData: KeyData, onConnected: (Boolean) -> Unit) {
     private lateinit var session: Session
     var shellOpen = false
+    private var channel: Channel? = null
 
     init {
         buildClient(host, username, port, keyData.privateKeyPath, onConnected)
@@ -33,6 +34,18 @@ class SSHClient(host: String, username: String, port: Int, keyData: KeyData, onC
         }.start()
     }
 
+    fun closeShell() {
+        try {
+            if (channel == null) return
+            if (channel!!.isConnected)
+                channel?.disconnect()
+            shellOpen = false
+        } catch (e: JSchException) {
+            System.err.print(e)
+        }
+    }
+
+
     fun disconnect() {
         try {
             if (session.isConnected)
@@ -44,17 +57,17 @@ class SSHClient(host: String, username: String, port: Int, keyData: KeyData, onC
 
     fun openShell(onResponse: (String) -> Unit) {
         try {
-            val channel = session.openChannel("shell") as ChannelShell
+            channel = session.openChannel("shell") as ChannelShell
             val pip = PipedInputStream()
             val pop = PipedOutputStream(pip)
-            var baos = ByteArrayOutputStream()
-            channel.setOutputStream(baos, true)
-            channel.setInputStream(pip, true)
+            val baos = ByteArrayOutputStream()
+            channel!!.setOutputStream(baos, true)
+            channel!!.setInputStream(pip, true)
 
-            channel.connect()
+            channel!!.connect()
 
             var lastCmd = ""
-            shellOpen = true
+            shellOpen = channel!!.isConnected
             Thread {
                 while (true) {
                     while (!cmdQueue.isEmpty()) {
@@ -62,13 +75,13 @@ class SSHClient(host: String, username: String, port: Int, keyData: KeyData, onC
                         try {
                             lastCmd = cmdQueue.remove()
                             if (lastCmd.lowercase().contains("ctrl-b")) {
-                                lastCmd = lastCmd.replace("ctrl-b", "\u0002",true)
+                                lastCmd = lastCmd.replace("ctrl-b", "\u0002", true)
                             }
                             if (lastCmd.lowercase().contains("ctrl-d")) {
-                                lastCmd = lastCmd.replace("ctrl-d", "\u0004",true)
+                                lastCmd = lastCmd.replace("ctrl-d", "\u0004", true)
                             }
-                            val cmd = "$lastCmd\r"
-                            pop.write(cmd.toByteArray())
+                            lastCmd += "\r"
+                            pop.write(lastCmd.toByteArray())
                             pop.flush()
                         } catch (e: Exception) {
                             e.printStackTrace()
@@ -84,8 +97,9 @@ class SSHClient(host: String, username: String, port: Int, keyData: KeyData, onC
                             e.printStackTrace()
                         }
                     }
-                    if (channel.isClosed) {
+                    if (channel == null || channel!!.isClosed) {
                         print("Channel Closed")
+
                         shellOpen = false
                         break
                     }
@@ -101,22 +115,6 @@ class SSHClient(host: String, username: String, port: Int, keyData: KeyData, onC
             e.printStackTrace()
         }
 
-    }
-
-    fun execute(command: List<String>) {
-
-        try {
-            Thread {
-                if (!session.isConnected) session.connect()
-                val channel = session.openChannel("exec")
-                command.forEach { (channel as ChannelExec).setCommand(it) }
-                (channel as ChannelExec).setPty(false)
-                channel.connect()
-
-            }.start()
-        } catch (e: JSchException) {
-            System.err.print(e)
-        }
     }
 
     class Builder(private val host: String, private val username: String, private val port: Int, path: String) {

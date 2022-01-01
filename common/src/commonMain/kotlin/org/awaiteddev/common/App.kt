@@ -50,6 +50,9 @@ fun App() {
 
     val showDrawer = pageState != Page.CreateKey
 
+    if(pageState!=Page.Client)
+        ssh?.closeShell()
+
     Scaffold(
         drawerGesturesEnabled = scaffoldState.drawerState.isOpen,
         scaffoldState = scaffoldState,

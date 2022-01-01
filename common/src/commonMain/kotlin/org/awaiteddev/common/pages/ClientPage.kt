@@ -62,8 +62,8 @@ fun ClientPage() {
             Button(onClick = {
                 showSpinner = true
                 responseValue += "\n>> $cmdInput"
-                cmdInput=""
                 cmdQueue.add(cmdInput)
+                cmdInput=""
             }) { Text("Exec") }
             Box {
                 if (showSpinner) {

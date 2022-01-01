@@ -90,7 +90,11 @@ fun ConnectPage(onPageChange: (Page) -> Unit) {
                         onConnected = {
                             showSpinner = false
                             if (it) onPageChange.invoke(Page.Client)
-                            else connectionMessage = "Check Inputs, unable to connect to SSH Session"
+                            else{
+                                connectionMessage = "Check Inputs, unable to connect to SSH Session"
+                                ssh = null
+                            }
+
                         })
                 }) {
                 Text("Connect")

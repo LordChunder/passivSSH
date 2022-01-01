@@ -3,7 +3,10 @@ package org.awaiteddev.common.ssh
 import com.jcraft.jsch.*
 import org.awaiteddev.common.data.AppDataManager.cmdQueue
 import org.awaiteddev.common.data.KeyData
-import java.io.*
+import java.io.ByteArrayOutputStream
+import java.io.PipedInputStream
+import java.io.PipedOutputStream
+import java.nio.charset.Charset
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.*
@@ -47,17 +50,25 @@ class SSHClient(host: String, username: String, port: Int, keyData: KeyData, onC
             var baos = ByteArrayOutputStream()
             channel.setOutputStream(baos, true)
             channel.setInputStream(pip, true)
+
             channel.connect()
 
-            var lastCmd =""
+            var lastCmd = ""
             shellOpen = true
             Thread {
                 while (true) {
                     while (!cmdQueue.isEmpty()) {
-                        lastCmd = cmdQueue.remove()
+
                         try {
-                            lastCmd += "\r"
-                            pop.write(lastCmd.toByteArray())
+                            lastCmd = cmdQueue.remove()
+                            if (lastCmd.lowercase().contains("ctrl-b")) {
+                                lastCmd = lastCmd.replace("ctrl-b", "\u0002",true)
+                            }
+                            if (lastCmd.lowercase().contains("ctrl-d")) {
+                                lastCmd = lastCmd.replace("ctrl-d", "\u0004",true)
+                            }
+                            val cmd = "$lastCmd\r"
+                            pop.write(cmd.toByteArray())
                             pop.flush()
                         } catch (e: Exception) {
                             e.printStackTrace()
@@ -65,8 +76,8 @@ class SSHClient(host: String, username: String, port: Int, keyData: KeyData, onC
                     }
                     if (baos.toString() != "") {
                         try {
-                            baos.toString().split("\n").forEach {
-                                  if(it != lastCmd) onResponse.invoke(it)
+                            baos.toString(Charset.forName("UTF-8")).split("\n").forEach {
+                                if (it != lastCmd) onResponse.invoke(it)
                             }
                             baos.reset()
                         } catch (e: Exception) {
@@ -75,7 +86,7 @@ class SSHClient(host: String, username: String, port: Int, keyData: KeyData, onC
                     }
                     if (channel.isClosed) {
                         print("Channel Closed")
-                        shellOpen=false
+                        shellOpen = false
                         break
                     }
                     try {
@@ -84,70 +95,69 @@ class SSHClient(host: String, username: String, port: Int, keyData: KeyData, onC
                         e.printStackTrace()
                     }
                 }
-        }.start()
-    } catch (e: Exception)
-    {
+            }.start()
+        } catch (e: Exception) {
 
-        e.printStackTrace()
-    }
-
-}
-
-fun execute(command: List<String>) {
-
-    try {
-        Thread {
-            if (!session.isConnected) session.connect()
-            val channel = session.openChannel("exec")
-            command.forEach { (channel as ChannelExec).setCommand(it) }
-            (channel as ChannelExec).setPty(false)
-            channel.connect()
-
-        }.start()
-    } catch (e: JSchException) {
-        System.err.print(e)
-    }
-}
-
-class Builder(private val host: String, private val username: String, private val port: Int, path: String) {
-
-    private val privateKeyPath: Path
-    private lateinit var jschSession: Session
-
-    init {
-        this.privateKeyPath = Paths.get(path)
-    }
-
-    private fun validate() {
-        if (port < 1) {
-            throw IllegalArgumentException("Port number must start with 1.")
+            e.printStackTrace()
         }
+
     }
 
-    fun build(): Session? {
-        validate()
-        val jsch = JSch()
-        val session: Session?
+    fun execute(command: List<String>) {
 
         try {
+            Thread {
+                if (!session.isConnected) session.connect()
+                val channel = session.openChannel("exec")
+                command.forEach { (channel as ChannelExec).setCommand(it) }
+                (channel as ChannelExec).setPty(false)
+                channel.connect()
 
-            jsch.addIdentity(privateKeyPath.toString())
-
-            session = jsch.getSession(username, host, port)
-            session.setConfig("PreferredAuthentications", "publickey")
-
-            val config = Properties()
-            config["StrictHostKeyChecking"] = "no"
-
-            session.setConfig(config)
-
+            }.start()
         } catch (e: JSchException) {
-            throw RuntimeException("Failed to create Jsch Session object.", e)
+            System.err.print(e)
         }
-
-        this.jschSession = session
-        return session
     }
 
-}
+    class Builder(private val host: String, private val username: String, private val port: Int, path: String) {
+
+        private val privateKeyPath: Path
+        private lateinit var jschSession: Session
+
+        init {
+            this.privateKeyPath = Paths.get(path)
+        }
+
+        private fun validate() {
+            if (port < 1) {
+                throw IllegalArgumentException("Port number must start with 1.")
+            }
+        }
+
+        fun build(): Session? {
+            validate()
+            val jsch = JSch()
+            val session: Session?
+
+            try {
+
+                jsch.addIdentity(privateKeyPath.toString())
+
+                session = jsch.getSession(username, host, port)
+                session.setConfig("PreferredAuthentications", "publickey")
+
+                val config = Properties()
+                config["StrictHostKeyChecking"] = "no"
+
+                session.setConfig(config)
+
+            } catch (e: JSchException) {
+                throw RuntimeException("Failed to create Jsch Session object.", e)
+            }
+
+            this.jschSession = session
+            return session
+        }
+
+    }
 }

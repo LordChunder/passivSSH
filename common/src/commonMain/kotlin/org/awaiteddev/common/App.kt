@@ -22,9 +22,9 @@ import androidx.compose.ui.unit.TextUnitType
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
-import org.awaiteddev.common.data.AppDataManager.ssh
 import org.awaiteddev.common.pages.*
 import org.awaiteddev.common.ssh.KeyFileHandler
+import org.awaiteddev.common.ssh.SSHClient
 
 sealed class Page(val name: String) {
     object Connect : Page("Connect")
@@ -51,7 +51,7 @@ fun App() {
     val showDrawer = pageState != Page.CreateKey
 
     if(pageState!=Page.Client)
-        ssh?.closeShell()
+        SSHClient.closeShell()
 
     Scaffold(
         drawerGesturesEnabled = scaffoldState.drawerState.isOpen,
@@ -126,8 +126,7 @@ fun App() {
                     }
                     DrawerRow("Disconnect", isConnectedSSH) {
                         if (pageState != Page.Home) pageState = Page.Home
-                        ssh!!.disconnect()
-                        ssh = null
+                        SSHClient.disconnect()
                         showSnackbar("Disconnected From Session", scaffoldState, scope)
                         scope.launch { scaffoldState.drawerState.close() }
                     }
@@ -149,7 +148,7 @@ fun App() {
             Page.KeyManagement -> KeyManagement(onPageChange = { pageState = it })
             Page.CreateKey -> CreateKeyPage(onPageChange = { pageState = it })
         }
-        isConnectedSSH = ssh != null
+        isConnectedSSH = SSHClient.isConnected
     }
 }
 

@@ -12,7 +12,6 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import org.awaiteddev.common.Page
 import org.awaiteddev.common.data.AppDataManager
-import org.awaiteddev.common.data.AppDataManager.ssh
 import org.awaiteddev.common.data.KeyData
 import org.awaiteddev.common.ssh.SSHClient
 
@@ -82,17 +81,16 @@ fun ConnectPage(onPageChange: (Page) -> Unit) {
                 onClick = {
                     connectionMessage = ""
                     showSpinner = true
-                    ssh = SSHClient(
+                    SSHClient.buildClient(
                         hostIPInput,
                         usernameInput,
                         portInput.toInt(),
-                        selectedKey!!,
+                        selectedKey!!.privateKeyPath,
                         onConnected = {
                             showSpinner = false
                             if (it) onPageChange.invoke(Page.Client)
-                            else{
+                            else {
                                 connectionMessage = "Check Inputs, unable to connect to SSH Session"
-                                ssh = null
                             }
 
                         })

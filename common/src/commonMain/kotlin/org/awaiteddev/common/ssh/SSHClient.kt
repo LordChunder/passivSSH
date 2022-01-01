@@ -1,45 +1,50 @@
 package org.awaiteddev.common.ssh
 
 import com.jcraft.jsch.*
-import org.awaiteddev.common.data.AppDataManager.cmdQueue
-import org.awaiteddev.common.data.KeyData
 import java.io.ByteArrayOutputStream
 import java.io.PipedInputStream
 import java.io.PipedOutputStream
+import java.nio.ByteBuffer
 import java.nio.charset.Charset
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.*
+import java.util.concurrent.ConcurrentLinkedQueue
 
 
-class SSHClient(host: String, username: String, port: Int, keyData: KeyData, onConnected: (Boolean) -> Unit) {
-    private lateinit var session: Session
-    var shellOpen = false
+object SSHClient {
+    private var session: Session? = null
+    val isConnected
+        get() = session != null && session!!.isConnected
+    private val shellOpen
+        get() = channel != null && channel!!.isConnected
     private var channel: Channel? = null
+    private val cmdQueue = ConcurrentLinkedQueue<String>()
 
-    init {
-        buildClient(host, username, port, keyData.privateKeyPath, onConnected)
+    fun sendCommand(cmd: String) {
+        if (shellOpen && isConnected)
+            cmdQueue.add(cmd)
     }
 
-    private fun buildClient(host: String, username: String, port: Int, path: String, onConnected: (Boolean) -> Unit) {
-        Thread {
-            try {
-                session = Builder(host, username, port, path).build()!!
-                session.connect()
-                onConnected.invoke(true)
-            } catch (e: JSchException) {
-                onConnected.invoke(false)
-                return@Thread
-            }
-        }.start()
+    fun buildClient(host: String, username: String, port: Int, path: String, onConnected: (Boolean) -> Unit) {
+        if (!isConnected)
+            Thread {
+                try {
+                    session = Builder(host, username, port, path).build()
+                    session?.connect()
+                    onConnected.invoke(true)
+                } catch (e: JSchException) {
+                    onConnected.invoke(false)
+                    return@Thread
+                }
+            }.start()
     }
 
     fun closeShell() {
+        if (!shellOpen) return
         try {
-            if (channel == null) return
             if (channel!!.isConnected)
                 channel?.disconnect()
-            shellOpen = false
         } catch (e: JSchException) {
             System.err.print(e)
         }
@@ -47,27 +52,28 @@ class SSHClient(host: String, username: String, port: Int, keyData: KeyData, onC
 
 
     fun disconnect() {
-        try {
-            if (session.isConnected)
-                session.disconnect()
-        } catch (e: JSchException) {
-            System.err.print(e)
-        }
+        if (!isConnected)
+            try {
+                session?.disconnect()
+            } catch (e: JSchException) {
+                e.printStackTrace()
+            }
     }
 
     fun openShell(onResponse: (String) -> Unit) {
+        if (!isConnected || shellOpen) return
         try {
-            channel = session.openChannel("shell") as ChannelShell
+            channel = session?.openChannel("shell") as ChannelShell
             val pip = PipedInputStream()
             val pop = PipedOutputStream(pip)
             val baos = ByteArrayOutputStream()
-            channel!!.setOutputStream(baos, true)
-            channel!!.setInputStream(pip, true)
+            channel?.setOutputStream(baos, true)
+            channel?.setInputStream(pip, true)
 
-            channel!!.connect()
+            channel?.connect()
 
             var lastCmd = ""
-            shellOpen = channel!!.isConnected
+
             Thread {
                 while (true) {
                     while (!cmdQueue.isEmpty()) {
@@ -89,8 +95,15 @@ class SSHClient(host: String, username: String, port: Int, keyData: KeyData, onC
                     }
                     if (baos.toString() != "") {
                         try {
-                            baos.toString(Charset.forName("UTF-8")).split("\n").forEach {
-                                if (it != lastCmd) onResponse.invoke(it)
+                            Charset.forName("UTF-8").decode(
+                                ByteBuffer.wrap(baos.toByteArray())
+                            ).toString().split("\n").forEach {
+                                if (it != lastCmd) onResponse.invoke(
+                                    it
+                                        .replace("\u001B\\[[;\\d]*m".toRegex(), "")
+                                        .replace("\u001B\\[[;\\d]*[ -/]*[@-~]".toRegex(),"")
+
+                                )
                             }
                             baos.reset()
                         } catch (e: Exception) {
@@ -99,8 +112,6 @@ class SSHClient(host: String, username: String, port: Int, keyData: KeyData, onC
                     }
                     if (channel == null || channel!!.isClosed) {
                         print("Channel Closed")
-
-                        shellOpen = false
                         break
                     }
                     try {

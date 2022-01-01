@@ -11,15 +11,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import kotlinx.coroutines.launch
-import org.awaiteddev.common.data.AppDataManager
-import org.awaiteddev.common.data.AppDataManager.cmdQueue
-import org.awaiteddev.common.data.AppDataManager.ssh
 import org.awaiteddev.common.ssh.SSHClient
-
 import java.sql.Timestamp
 import java.text.SimpleDateFormat
-import java.util.concurrent.ConcurrentLinkedDeque
-import java.util.concurrent.ConcurrentLinkedQueue
 
 
 @Composable
@@ -31,15 +25,13 @@ fun ClientPage() {
     val scroll = rememberScrollState(100)
     val scope = rememberCoroutineScope()
 
-    if (ssh != null) {
-        if (!ssh!!.shellOpen)
-            ssh!!.openShell {
-                responseValue += "\n${SimpleDateFormat("HH:mm:ss").format(Timestamp(System.currentTimeMillis()))}: $it"
-                showSpinner = false
-                scope.launch {
-                    scroll.scrollTo(0)
-                }
-            }
+
+    SSHClient.openShell {
+        responseValue += "\n${SimpleDateFormat("HH:mm:ss").format(Timestamp(System.currentTimeMillis()))}: $it"
+        showSpinner = false
+        scope.launch {
+            scroll.scrollTo(0)
+        }
     }
 
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -68,7 +60,7 @@ fun ClientPage() {
             Button(onClick = {
                 showSpinner = true
                 responseValue += "\n>> $cmdInput"
-                cmdQueue.add(cmdInput)
+                SSHClient.sendCommand(cmdInput)
                 cmdInput = ""
             }) { Text("Exec") }
             Box {

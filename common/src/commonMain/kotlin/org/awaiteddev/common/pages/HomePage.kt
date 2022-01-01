@@ -4,7 +4,10 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material.Button
 import androidx.compose.material.CircularProgressIndicator
 import androidx.compose.material.Text
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -13,7 +16,7 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.TextUnitType
 import androidx.compose.ui.unit.dp
 import org.awaiteddev.common.Page
-import org.awaiteddev.common.data.AppDataManager
+import org.awaiteddev.common.ssh.SSHClient
 
 @ExperimentalUnitApi
 @Composable
@@ -39,7 +42,7 @@ fun HomePage(onPageChange: (Page) -> Unit) {
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Button(onClick = {
-            onPageChange.invoke(if (AppDataManager.ssh == null) Page.Connect else Page.Client)
+            onPageChange.invoke(if (!SSHClient.isConnected) Page.Connect else Page.Client)
         }) {
             Text("SSH Client")
         }
